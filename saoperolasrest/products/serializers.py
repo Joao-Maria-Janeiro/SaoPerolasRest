@@ -6,12 +6,12 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = '__all__'
 
-
-
 class BackGroundImageSerializer(serializers.ModelSerializer):
+    product_type = serializers.ReadOnlyField(source='product_type.name', read_only=True)
+
     class Meta:
         model = BackGroundImage
-        fields = '__all__'
+        fields = ('image', 'product_type')
 
 class CoverPhotoSerializer(serializers.ModelSerializer):
     class Meta:
