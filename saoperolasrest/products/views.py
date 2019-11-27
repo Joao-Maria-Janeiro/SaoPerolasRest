@@ -4,6 +4,10 @@ from .serializers import ProductSerializer, ProductTypeSerializer, CoverPhotoSer
 from rest_framework.renderers import JSONRenderer
 from django.http import JsonResponse, HttpResponse
 import json
+import base64
+from django.core import files
+import tempfile
+
 
 def get_cover_photos(request):
     queryset = CoverPhoto.objects.order_by('id')
@@ -43,3 +47,34 @@ def create_product(request):
     )
     product.save()
     return HttpResponse("Created successfully")
+
+def image_test(request):
+    # body_unicode = request.body.decode('utf-8')
+    # body = json.loads(request)
+    # product = Product(
+    #     name = "teste",
+    #     description = "dasdasdas",
+    #     price = 0,
+    #     image = base64.urlsafe_b64decode(request.body),
+    #     product_type = ProductType.objects.get(name = "pulseiras"),
+    #     available_quantity = 0,
+    # )
+    # product.save()
+    
+    lf = tempfile.NamedTemporaryFile()
+
+    lf.write(base64.b64decode(request.body))
+
+    product = Product(
+        name = "teste",
+        description = "dasdasdas",
+        price = 0,
+        # image = base64.urlsafe_b64decode(request.body),
+        product_type = ProductType.objects.get(name = "pulseiras"),
+        available_quantity = 0,
+    )
+    product.save()
+    # Save the temporary image to the model#
+    # This saves the model so be sure that is it valid
+    product.image.save("test.png", files.File(lf))
+    return HttpResponse(request.body)
