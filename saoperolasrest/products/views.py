@@ -34,6 +34,16 @@ def get_types(request):
     serializer = ProductTypeSerializer(queryset, many=True)
     return JsonResponse(serializer.data, safe=False)
 
+def get_product_from_id(request, id):
+    try:
+        queryset = Product.objects.get(id=id)
+    except:
+        return HttpResponse("No matching product")
+    serializer = ProductSerializer(queryset, many=False)
+    return JsonResponse(serializer.data, safe=False)
+
+## Still under development under here
+
 def create_product(request):
     body_unicode = request.body.decode('utf-8')
     body = json.loads(body_unicode)
