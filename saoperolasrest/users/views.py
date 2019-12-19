@@ -1,11 +1,13 @@
 from django.shortcuts import render
 from rest_framework.renderers import JSONRenderer
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from rest_framework.authtoken.models import Token
 import json
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 import uuid
+from cart.models import Cart
+from cart.models import ShippingDetails
 
 
 # Create your views here.
@@ -14,7 +16,7 @@ def user_already_exists(request):
     try:
         User.objects.get(email = request.POST['email'])
         return True
-    except e:
+    except Exception as e:
         return False
 
 def signup_view(request):
@@ -23,18 +25,23 @@ def signup_view(request):
     body_unicode = request.body.decode('utf-8')
     body = json.loads(body_unicode)
     name = (str(uuid.uuid4()))[:4]
-    user = User.objects.create_user(((request.POST['email']).split("@"))[0] + name, request.POST['email'], request.POST["password1"])
+    user = User.objects.create_user(((body['email']).split("@"))[0] + name, body['email'], body["password1"])
     user.save()
-    user.cart = Cart(id=0, total_price=0, user=user)
-    user.userprofile.name = request.POST['first_name']
-    user.userprofile.last_name = request.POST['last_name']
-    user.userprofile.country = request.POST['country']
-    user.userprofile.address = request.POST['address']
-    user.userprofile.city = request.POST['city']
-    user.userprofile.zip_code = request.POST['zip_code']
-    user.userprofile.localidade = request.POST['localidade']
-    user.userprofile.cell_number = request.POST['cell_number']
-    user.userprofile.email = request.POST['email']
+    # user.cart = Cart(id=0, total_price=0, user=user)
+    user.first_name = body['first_name']
+    user.last_name = body['last_name']
+    user.email = body['email']
+    saved_shipping = ShippingDetails(
+        full_name = body['first_name'] + " " + body['last_name'], 
+        adress = body['address'],
+        city = body['city'],
+        localidade = body['localidade'],
+        zip = body['zip_code'],
+        country = body['country'],
+        phone_number = body['cell_number'],
+        email = body['email'])
+    saved_shipping.save()
+    user.userprofile.saved_shipping = saved_shipping
     user.save()
     user.userprofile.save()
     return JSONRenderer({'error': ''})
@@ -50,11 +57,12 @@ def login(request):
         try:
             user = User.objects.get(email=email)
         except Exception as e:
-            return HttpResponse('null')
+            return JsonResponse({"error":"login failed"})
         authenticated = authenticate(username=user.username, password=password)
         if authenticated is not None:
-            return HttpResponse(Token.objects.get_or_create(user=user))
+            token = Token.objects.get_or_create(user=user)
+            return JsonResponse({"token":token[0].key,"username":user.first_name})
         else:
-            return HttpResponse('null')
+            return JsonResponse({"error":"login failed"})
     else:
         return HttpResponse('POST ONLY')

@@ -3,6 +3,9 @@ from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save
 from django.contrib.auth.models import User
 from products.models import Product
+from cart.models import ShippingDetails
+from django.conf import settings
+
 
 
 User = get_user_model()
@@ -12,7 +15,7 @@ class UserProfile(models.Model):
     favourite_products = models.ManyToManyField(Product, blank=True)
     anonymous_user = models.BooleanField(default=False)
     use_saved_shipping = models.BooleanField(default=False)
-    # saved_shipping = models.OneToOneField(ShippingDetails, on_delete=models.CASCADE)
+    saved_shipping = models.OneToOneField(ShippingDetails, on_delete=models.CASCADE)
     # temporary_shipping = models.OneToOneField(ShippingDetails, on_delete=models.CASCADE)
     
     def __str__(self):
