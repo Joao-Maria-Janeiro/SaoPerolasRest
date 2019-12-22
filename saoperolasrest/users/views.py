@@ -10,24 +10,26 @@ from cart.models import Cart
 from cart.models import ShippingDetails
 
 
-# Create your views here.
 
-def user_already_exists(request):
+# Helper methods
+
+def user_exists(email):
     try:
-        User.objects.get(email = request.POST['email'])
+        User.objects.get(email = email)
         return True
     except Exception as e:
         return False
 
+# Views
+
 def signup_view(request):
-    if user_already_exists(request):
-        return JSONRenderer({'error': 'Já existe um utilizador com este email'})
     body_unicode = request.body.decode('utf-8')
     body = json.loads(body_unicode)
+    if user_exists(body['email']):
+        return JsonResponse({'error': 'Já existe um utilizador com este email'})
     name = (str(uuid.uuid4()))[:4]
     user = User.objects.create_user(((body['email']).split("@"))[0] + name, body['email'], body["password1"])
     user.save()
-    # user.cart = Cart(id=0, total_price=0, user=user)
     user.first_name = body['first_name']
     user.last_name = body['last_name']
     user.email = body['email']
@@ -44,7 +46,7 @@ def signup_view(request):
     user.userprofile.saved_shipping = saved_shipping
     user.save()
     user.userprofile.save()
-    return JSONRenderer({'error': ''})
+    return JsonResponse({})
 
 
 
@@ -54,10 +56,9 @@ def login(request):
         body = json.loads(body_unicode)
         email = body['email']
         password = body['password']
-        try:
-            user = User.objects.get(email=email)
-        except Exception as e:
+        if not user_exists(email):
             return JsonResponse({"error":"login failed"})
+        user = User.objects.get(email = email)
         authenticated = authenticate(username=user.username, password=password)
         if authenticated is not None:
             token = Token.objects.get_or_create(user=user)
