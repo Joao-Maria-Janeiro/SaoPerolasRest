@@ -4,6 +4,8 @@ from products.models import Product
 from django.http import JsonResponse, HttpResponse
 import uuid
 from django.contrib.auth.models import User
+import json
+from .serializers import CartSerializer
 
 
 shipping_price = 3
@@ -34,30 +36,35 @@ def calc_price(cart):
     cart.total_price +=  shipping_price
 
 # Create your views here.
-def add_to_cart(request, id):
-    if(Product.objects.get(id=id).available_quantity > 0):
-        user = get_user(request) 
-        if user is not False:
-            cart = user.cart
-            if not product_is_new(cart, id):
-                product = CartProduct(product=Product.objects.get(id=id))
-                product.save()
-                cart.products.add(product)
-            cart.total_price = 0
-            calc_price(cart)
-            cart.save()
+def add_to_cart(request):
+    if request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        product = Product.objects.get(id=body['id'])
+        if(product.available_quantity > 0):
+            user = get_user(request) 
+            if user is not False:
+                cart = user.cart
+                if not product_is_new(cart, id):
+                    product = CartProduct(product=product)
+                    product.save()
+                    cart.products.add(product)
+                cart.total_price = 0
+                calc_price(cart)
+                cart.save()
+            else:
+                return JsonResponse({"error":"login failed"})
         else:
-            name = str(uuid.uuid4())
-            email = name + "@gmail.com"
-            user = User.objects.create_user(name, email, 'johnpassword')
-            user.save()
-            user.userprofile.anonymous_user = True
-            user.userprofile.save()
-            if not product_is_new(cart, id):
-                product = CartProduct(product=Product.objects.get(id=id))
-                product.save()
-                cart.products.add(product)
-            cart.total_price = 0
-            calc_price(cart)
-            cart.save()
-    return HttpResponse('Success')
+            return JsonResponse({"error":"Not enough quantity"})
+        return JsonResponse({"error":""})
+    else:
+        return HttpResponse('POST ONLY')
+
+def get_user_cart(request):
+    user = get_user(request)
+    if user is not False:
+        cart = user.cart
+        serializer = CartSerializer(cart)
+        return JsonResponse(serializer, safe=False)
+    else:
+        return JsonResponse({"error":"login failed"})
