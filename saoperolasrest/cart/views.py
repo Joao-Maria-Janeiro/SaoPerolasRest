@@ -21,12 +21,10 @@ def get_user(request):
 def product_is_new(cart, id):
     for product in cart.products.all():
         if product.product.id == id:
-            product.quantity += 1
-            product.save()
-            return True
-    return False
+            return False
+    return True
 
-def calc_price(cart):
+def calc_price_and_update(cart):
     if(len(cart.products.all()) == 0):
         cart.total_price = 0
         return
@@ -45,12 +43,16 @@ def add_to_cart(request):
             user = get_user(request) 
             if user is not False:
                 cart = user.cart
-                if not product_is_new(cart, id):
-                    product = CartProduct(product=product)
-                    product.save()
-                    cart.products.add(product)
+                if product_is_new(cart, body['id']):
+                    cart_product = CartProduct(product=product)
+                    cart_product.save()
+                    cart.products.add(cart_product)
+                else:
+                    cart_product = CartProduct.objects.get(cart=cart, product = product)
+                    cart_product.quantity += 1
+                    cart_product.save()
                 cart.total_price = 0
-                calc_price(cart)
+                calc_price_and_update(cart)
                 cart.save()
             else:
                 return JsonResponse({"error":"login failed"})
