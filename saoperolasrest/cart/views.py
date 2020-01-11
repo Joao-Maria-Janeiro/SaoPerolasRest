@@ -64,7 +64,7 @@ def get_user_cart(request):
     user = get_user(request)
     if user is not False:
         cart = user.cart
-        serializer = CartSerializer(cart)
-        return JsonResponse(serializer, safe=False)
+        serializer = CartSerializer(cart, many=False)
+        return JsonResponse(serializer.data, safe=False)
     else:
         return JsonResponse({"error":"login failed"})
