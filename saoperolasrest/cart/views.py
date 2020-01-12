@@ -70,3 +70,46 @@ def get_user_cart(request):
         return JsonResponse(serializer.data, safe=False)
     else:
         return JsonResponse({"error":"login failed"})
+
+def update_product_quantity_in_cart(request):
+    if request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        product = CartProduct.objects.get(id=body['id'])
+        user = get_user(request)
+        if user is not False:
+            cart = user.cart 
+        else:
+            return JsonResponse({"error":"A sua sessão expirou, por favor fa;a login de novo"})
+        if body['operation'] == 'increase':
+            if product.product.available_quantity >= product.quantity + body['quantity']:
+                product.quantity += body['quantity']
+                product.save()
+                cart.total_price += product.product.price
+                cart.save()
+                return JsonResponse({"error":""})
+            else:
+                return JsonResponse({"error":"A quantidade pretendida não está disponível"})
+        elif body['operation'] == 'subtract':
+            if product.quantity - body['quantity'] > 0 :
+                product.quantity -= body['quantity']
+                product.save()
+                cart.total_price -= product.product.price
+                cart.save()
+                return JsonResponse({"error":""})
+            elif product.quantity - body['quantity'] == 0:
+                user = get_user(request)
+                user.cart.products.remove(product)
+                calc_price_and_update(cart)
+                cart.save()
+                return JsonResponse({"error":"A quantidade tem de ser maior que 0"})
+            else:
+                return JsonResponse({"error":"A quantidade tem de ser maior que 0"})
+        else:
+            cart.products.remove(product)
+            calc_price_and_update(cart)
+            cart.save()
+            product.delete()
+            return JsonResponse({"error":""})
+    else:
+        return HttpResponse('POST ONLY')
