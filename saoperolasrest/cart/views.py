@@ -49,8 +49,11 @@ def add_to_cart(request):
                     cart.products.add(cart_product)
                 else:
                     cart_product = CartProduct.objects.get(cart=cart, product = product)
-                    cart_product.quantity += 1
-                    cart_product.save()
+                    if (cart_product.quantity == product.available_quantity):
+                        cart_product.quantity += 1
+                        cart_product.save()
+                    else :
+                        return JsonResponse({"error":"Not enough quantity"})
                 cart.total_price = 0
                 calc_price_and_update(cart)
                 cart.save()
@@ -86,6 +89,8 @@ def update_product_quantity_in_cart(request):
                 product.quantity += body['quantity']
                 product.save()
                 cart.total_price += product.product.price
+                if cart.total_price == shipping_price:
+                    cart.total_price = 0
                 cart.save()
                 return JsonResponse({"error":""})
             else:
@@ -95,21 +100,30 @@ def update_product_quantity_in_cart(request):
                 product.quantity -= body['quantity']
                 product.save()
                 cart.total_price -= product.product.price
+                if cart.total_price == shipping_price:
+                    cart.total_price = 0
                 cart.save()
                 return JsonResponse({"error":""})
             elif product.quantity - body['quantity'] == 0:
                 user = get_user(request)
                 user.cart.products.remove(product)
-                calc_price_and_update(cart)
+                cart.total_price -= ((product.quantity) * product.product.price)
+                product.delete()
+                if cart.total_price == shipping_price:
+                    cart.total_price = 0
                 cart.save()
                 return JsonResponse({"error":"A quantidade tem de ser maior que 0"})
             else:
                 return JsonResponse({"error":"A quantidade tem de ser maior que 0"})
-        else:
+        elif body['operation'] == 'remove':
             cart.products.remove(product)
-            calc_price_and_update(cart)
-            cart.save()
+            cart.total_price -= ((product.quantity) * product.product.price)
             product.delete()
+            if cart.total_price == shipping_price:
+                    cart.total_price = 0
+            cart.save()
             return JsonResponse({"error":""})
+        else:
+            return JsonResponse({"error":"Operação não reconhecida"})
     else:
         return HttpResponse('POST ONLY')
