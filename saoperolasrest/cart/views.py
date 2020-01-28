@@ -127,3 +127,12 @@ def update_product_quantity_in_cart(request):
             return JsonResponse({"error":"Operação não reconhecida"})
     else:
         return HttpResponse('POST ONLY')
+
+from Crypto.Cipher import AES
+import base64
+
+def get_shipping(request):
+    body_unicode = request.body.decode('utf-8')
+    body = json.loads(body_unicode)
+    aes = AES.new('my 32 length key................')
+    return HttpResponse(body['encripted']  + " " + aes.decrypt(base64.b64decode(body['encripted'])))
