@@ -37,4 +37,7 @@ class Order(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, null=True)
     total_price = models.IntegerField(default=0)
     date_ordered = models.DateTimeField(auto_now=True)
+    payment_intent_client_secret = models.CharField(max_length=300)
+    payment_intent_id = models.CharField(max_length=300)
     shipping_details = models.ForeignKey(ShippingDetails, on_delete=models.CASCADE, null=True)
+    complete = models.BooleanField(default=False)

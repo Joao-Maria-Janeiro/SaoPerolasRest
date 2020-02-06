@@ -6,8 +6,9 @@ import uuid
 from django.contrib.auth.models import User
 import json
 from .serializers import CartSerializer
+import stripe
 
-
+stripe.api_key = 'sk_test_vrJ9UMWMBvNSz16dBvBbFeRd005R2WUDuE'
 shipping_price = 3
 
 def get_user(request):
@@ -132,7 +133,81 @@ from Crypto.Cipher import AES
 import base64
 
 def get_shipping(request):
-    body_unicode = request.body.decode('utf-8')
-    body = json.loads(body_unicode)
-    aes = AES.new('my 32 length key................')
-    return HttpResponse(body['encripted']  + " " + aes.decrypt(base64.b64decode(body['encripted'])))
+    # body_unicode = request.body.decode('utf-8')
+    # body = json.loads(body_unicode)
+    # iv = ''.join(['0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0'])
+    # iv = base64.b64encode(bytearray([192, 51, 226, 158, 90, 30, 34, 127, 69, 108, 66, 163, 78, 21, 224, 119])).decode("UTF-8")
+    aes = AES.new('my 32 length key................', AES.MODE_CBC)
+    print("\n\n\n\n\n\n\n")
+    # print(iv)
+    print("\n\n\n\n\n\n\n")
+    print(base64.b64encode(aes.IV))
+    print("\n\n\n\n\n\n\n")
+    print(base64.b64encode(aes.IV).decode("UTF-8"))
+    return HttpResponse(aes.decrypt('1a3ddd20b1907a28dca55bbd45c97fd42ccf234a5bdf1cf3f517b2ccf58a1e5c96932b20c136fd554e6e5a9ad9adb407'))
+    # return HttpResponse(body['encripted']  + " " + aes.decrypt(base64.b64decode(body['encripted'])))
+
+def createIntent(request):
+    if request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        if ('token' in body):
+            try:
+                user = User.objects.get(auth_token=body['token'])
+            except:
+                return JsonResponse({'error': 'A sua sessão expirou ou credenciais erradas, por favor faça login outra vez'})
+            try:
+                products = {}
+                for product in user.cart.products.all():
+                    products[product.product.name] = product.quantity
+                intent = stripe.PaymentIntent.create(
+                    amount=user.cart.total_price * 100,
+                    currency='eur',
+                    description='produtos',
+                    receipt_email=user.email,
+                    metadata=products,
+                    shipping = {
+                        "name": user.userprofile.saved_shipping.full_name,
+                        "phone": user.userprofile.saved_shipping.phone_number,
+                        "address": {
+                            "city": user.userprofile.saved_shipping.city,
+                            "country": user.userprofile.saved_shipping.country,
+                            "line1": user.userprofile.saved_shipping.adress,
+                            "postal_code": user.userprofile.saved_shipping.zip,
+                            "state": user.userprofile.saved_shipping.localidade
+                        }
+                    }
+                )
+            except:
+                return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos'})
+            order = Order(cart=user.cart, total_price=user.cart.total_price * 100, payment_intent_client_secret=intent.client_secret, payment_intent_id=intent.id, shipping_details=user.userprofile.saved_shipping)
+            order.save()
+            return JsonResponse({'token': intent.client_secret})
+        else:
+            try:
+                products = {}
+                for product in body['products']:
+                    products[product['name']] = product['quantity']
+                intent = stripe.PaymentIntent.create(
+                    amount=int(body['total_price']) * 100,
+                    currency='eur',
+                    description='produtos',
+                    receipt_email=body['email'],
+                    metadata=products,
+                    shipping = {
+                        "name": body['full_name'],
+                        "phone": body['cell'],
+                        "address": {
+                            "city": body['city'],
+                            "country": body['country'],
+                            "line1": body['address'],
+                            "postal_code": body['zip'],
+                            "state": body['localidade']
+                        }
+                    }
+                )
+            except:
+                return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos'})
+            order = Order(cart=None, total_price=int(body['total_price']) * 100, payment_intent_client_secret=intent.client_secret, payment_intent_id=intent.id, shipping_details=user.userprofile.saved_shipping)
+            order.save()
+            return JsonResponse({'token': intent.client_secret})
