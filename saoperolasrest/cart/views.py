@@ -179,7 +179,7 @@ def createIntent(request):
                     }
                 )
             except:
-                return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos'})
+                return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos. Se o erro persistir recarregue a página'})
             order = Order(cart=user.cart, total_price=user.cart.total_price * 100, payment_intent_client_secret=intent.client_secret, payment_intent_id=intent.id, shipping_details=user.userprofile.saved_shipping)
             order.save()
             return JsonResponse({'token': intent.client_secret})
@@ -207,7 +207,18 @@ def createIntent(request):
                     }
                 )
             except:
-                return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos'})
-            order = Order(cart=None, total_price=int(body['total_price']) * 100, payment_intent_client_secret=intent.client_secret, payment_intent_id=intent.id, shipping_details=user.userprofile.saved_shipping)
+                return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos. Se o erro persistir recarregue a página'})
+            shipping = ShippingDetails(
+                full_name=body['full_name'], 
+                adress=body['address'], 
+                city=body['city'], 
+                localidade=body['localidade'], 
+                zip=body['zip'], 
+                country=body['country'], 
+                phone_number=body['cell'], 
+                email=body['email'])
+            shipping.save()
+            order = Order(cart=None, total_price=int(body['total_price']) * 100, 
+                payment_intent_client_secret=intent.client_secret, payment_intent_id=intent.id, shipping_details=shipping)
             order.save()
             return JsonResponse({'token': intent.client_secret})
