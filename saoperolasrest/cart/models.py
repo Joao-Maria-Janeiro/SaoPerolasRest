@@ -40,4 +40,5 @@ class Order(models.Model):
     payment_intent_client_secret = models.CharField(max_length=300)
     payment_intent_id = models.CharField(max_length=300)
     shipping_details = models.ForeignKey(ShippingDetails, on_delete=models.CASCADE, null=True)
+    secret_token = models.CharField(max_length=300)
     complete = models.BooleanField(default=False)

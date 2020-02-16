@@ -7,8 +7,10 @@ from django.contrib.auth.models import User
 import json
 from .serializers import CartSerializer
 import stripe
+from .email import send_mail
+from .keys import STRIPE_KEY
 
-stripe.api_key = 'sk_test_vrJ9UMWMBvNSz16dBvBbFeRd005R2WUDuE'
+stripe.api_key = STRIPE_KEY
 shipping_price = 3
 
 def get_user(request):
@@ -132,21 +134,6 @@ def update_product_quantity_in_cart(request):
 from Crypto.Cipher import AES
 import base64
 
-def get_shipping(request):
-    # body_unicode = request.body.decode('utf-8')
-    # body = json.loads(body_unicode)
-    # iv = ''.join(['0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0'])
-    # iv = base64.b64encode(bytearray([192, 51, 226, 158, 90, 30, 34, 127, 69, 108, 66, 163, 78, 21, 224, 119])).decode("UTF-8")
-    aes = AES.new('my 32 length key................', AES.MODE_CBC)
-    print("\n\n\n\n\n\n\n")
-    # print(iv)
-    print("\n\n\n\n\n\n\n")
-    print(base64.b64encode(aes.IV))
-    print("\n\n\n\n\n\n\n")
-    print(base64.b64encode(aes.IV).decode("UTF-8"))
-    return HttpResponse(aes.decrypt('1a3ddd20b1907a28dca55bbd45c97fd42ccf234a5bdf1cf3f517b2ccf58a1e5c96932b20c136fd554e6e5a9ad9adb407'))
-    # return HttpResponse(body['encripted']  + " " + aes.decrypt(base64.b64decode(body['encripted'])))
-
 def createIntent(request):
     if request.method == 'POST':
         body_unicode = request.body.decode('utf-8')
@@ -180,9 +167,10 @@ def createIntent(request):
                 )
             except:
                 return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos. Se o erro persistir recarregue a página'})
-            order = Order(cart=user.cart, total_price=user.cart.total_price * 100, payment_intent_client_secret=intent.client_secret, payment_intent_id=intent.id, shipping_details=user.userprofile.saved_shipping)
+            secret = str(uuid.uuid4())
+            order = Order(cart=user.cart, total_price=user.cart.total_price * 100, payment_intent_client_secret=intent.client_secret, payment_intent_id=intent.id, shipping_details=user.userprofile.saved_shipping, secret_token=secret)
             order.save()
-            return JsonResponse({'token': intent.client_secret})
+            return JsonResponse({'token': intent.client_secret, 'secret': secret})
         else:
             try:
                 products = {}
@@ -208,17 +196,20 @@ def createIntent(request):
                 )
             except:
                 return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos. Se o erro persistir recarregue a página'})
-            shipping = ShippingDetails(
-                full_name=body['full_name'], 
-                adress=body['address'], 
-                city=body['city'], 
-                localidade=body['localidade'], 
-                zip=body['zip'], 
-                country=body['country'], 
-                phone_number=body['cell'], 
-                email=body['email'])
-            shipping.save()
-            order = Order(cart=None, total_price=int(body['total_price']) * 100, 
-                payment_intent_client_secret=intent.client_secret, payment_intent_id=intent.id, shipping_details=shipping)
+            secret = str(uuid.uuid4())
+            order = Order(cart=None, total_price=float(body['total_price']) * 100, 
+                payment_intent_client_secret=intent.client_secret, payment_intent_id=intent.id, shipping_details=None, secret_token=secret)
             order.save()
-            return JsonResponse({'token': intent.client_secret})
+            return JsonResponse({'token': intent.client_secret, 'secret': secret})
+
+def complete_order(request):
+    if request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        order = Order.objects.get(payment_intent_client_secret=body['token'], secret_token=body['secret'])
+        order.complete = True
+        order.save()
+        if send_mail(order, shipping_price):
+            return JsonResponse({'error': ''})
+        else:
+            return JsonResponse({'error': 'Ocorreu um erro ao enviar o seu comprovativo por email'})
