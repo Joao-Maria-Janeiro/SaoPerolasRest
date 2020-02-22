@@ -52,7 +52,7 @@ def add_to_cart(request):
                     cart.products.add(cart_product)
                 else:
                     cart_product = CartProduct.objects.get(cart=cart, product = product)
-                    if (cart_product.quantity == product.available_quantity):
+                    if (cart_product.quantity <= product.available_quantity):
                         cart_product.quantity += 1
                         cart_product.save()
                     else :
@@ -143,30 +143,30 @@ def createIntent(request):
                 user = User.objects.get(auth_token=body['token'])
             except:
                 return JsonResponse({'error': 'A sua sessão expirou ou credenciais erradas, por favor faça login outra vez'})
-            try:
-                products = {}
-                for product in user.cart.products.all():
-                    products[product.product.name] = product.quantity
-                intent = stripe.PaymentIntent.create(
-                    amount=user.cart.total_price * 100,
-                    currency='eur',
-                    description='produtos',
-                    receipt_email=user.email,
-                    metadata=products,
-                    shipping = {
-                        "name": user.userprofile.saved_shipping.full_name,
-                        "phone": user.userprofile.saved_shipping.phone_number,
-                        "address": {
-                            "city": user.userprofile.saved_shipping.city,
-                            "country": user.userprofile.saved_shipping.country,
-                            "line1": user.userprofile.saved_shipping.adress,
-                            "postal_code": user.userprofile.saved_shipping.zip,
-                            "state": user.userprofile.saved_shipping.localidade
-                        }
+            # try:
+            products = {}
+            for product in user.cart.products.all():
+                products[product.product.name] = product.quantity
+            intent = stripe.PaymentIntent.create(
+                amount=user.cart.total_price * 100,
+                currency='eur',
+                description='produtos',
+                receipt_email=user.email,
+                metadata=products,
+                shipping = {
+                    "name": user.userprofile.saved_shipping.full_name,
+                    "phone": user.userprofile.saved_shipping.phone_number,
+                    "address": {
+                        "city": user.userprofile.saved_shipping.city,
+                        "country": user.userprofile.saved_shipping.country,
+                        "line1": user.userprofile.saved_shipping.adress,
+                        "postal_code": user.userprofile.saved_shipping.zip,
+                        "state": user.userprofile.saved_shipping.localidade
                     }
-                )
-            except:
-                return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos. Se o erro persistir recarregue a página'})
+                }
+            )
+            # except:
+            #     return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos. Se o erro persistir recarregue a página'})
             secret = str(uuid.uuid4())
             order = Order(cart=user.cart, total_price=user.cart.total_price * 100, payment_intent_client_secret=intent.client_secret, payment_intent_id=intent.id, shipping_details=user.userprofile.saved_shipping, secret_token=secret)
             order.save()
@@ -212,4 +212,4 @@ def complete_order(request):
         if send_mail(order, shipping_price):
             return JsonResponse({'error': ''})
         else:
-            return JsonResponse({'error': 'Ocorreu um erro ao enviar o seu comprovativo por email'})
+            return JsonResponse({'error': 'Ocorreu um erro ao enviar o seu comprovativo por email, por favor envie um email para sao.perolas.pt@gmail.com para resolver a situação'})

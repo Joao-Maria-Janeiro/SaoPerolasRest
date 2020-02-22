@@ -316,7 +316,6 @@ def send_mail(order, shipping_price):
     try:
         intent = stripe.PaymentIntent.retrieve(order.payment_intent_id)
         number_of_keys = len(intent.metadata.keys())
-        i = 0
         products = Product.objects.filter(name__in=intent.metadata.keys())
 
         mailjet = Client(auth=(api_key, api_secret), version='v3.1')
