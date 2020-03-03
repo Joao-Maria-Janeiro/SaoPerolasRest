@@ -41,6 +41,7 @@ def model_pre_save(sender, instance, *args, **kwargs):
     except:
         pass
 
+pre_delete.connect(model_pre_delete, sender=Product)
 pre_delete.connect(model_pre_delete, sender=BackGroundImage)
 pre_delete.connect(model_pre_delete, sender=CoverPhoto)
 pre_save.connect(model_pre_save, sender=BackGroundImage)

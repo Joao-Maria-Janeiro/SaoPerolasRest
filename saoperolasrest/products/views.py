@@ -7,6 +7,8 @@ import json
 import base64
 from django.core import files
 import tempfile
+from django.core.files.base import ContentFile
+from cart.views import get_user
 
 
 def get_cover_photos(request):
@@ -45,46 +47,37 @@ def get_product_from_id(request, id):
 ## Still under development under here
 
 def create_product(request):
-    body_unicode = request.body.decode('utf-8')
-    body = json.loads(body_unicode)
-    product = Product(
-        name = body['name'],
-        description = body['description'],
-        price = body['price'],
-        image = body['image'],
-        product_type = ProductType.objects.get(name = body['type']),
-        available_quantity = body['available_quantity'],
-    )
-    product.save()
-    return HttpResponse("Created successfully")
+    if request.method == 'POST':
+        user = get_user(request)
+        if user == False:
+            return JsonResponse({'error': 'A sua conta não é reconhecida ou a sua sessão terminou, por favor faça login novamente'})
+        if user.is_superuser:
+            body_unicode = request.body.decode('utf-8')
+            body = json.loads(body_unicode)
+            
+            data = None
+            try:
+                data = body['image']
+                format, imgstr = data.split(';base64,') 
+                ext = format.split('/')[-1] 
 
-def image_test(request):
-    # body_unicode = request.body.decode('utf-8')
-    # body = json.loads(request)
-    # product = Product(
-    #     name = "teste",
-    #     description = "dasdasdas",
-    #     price = 0,
-    #     image = base64.urlsafe_b64decode(request.body),
-    #     product_type = ProductType.objects.get(name = "pulseiras"),
-    #     available_quantity = 0,
-    # )
-    # product.save()
-    
-    lf = tempfile.NamedTemporaryFile()
+                data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
+            except:
+                return JsonResponse({'error': 'Erro ao carregar a imagem. Carregou no botão "crop"?'})
 
-    lf.write(base64.b64decode(request.body))
+            try:
+                product = Product(
+                    name = body['name'],
+                    description = body['description'],
+                    price = body['price'],
+                    image = data,
+                    product_type = ProductType.objects.get(name = body['type']),
+                    available_quantity = body['quantity'],
+                )
+                product.save()
+            except:
+                return JsonResponse({'error': 'Erro ao criar o produto, por favor verifique que todas as informações estão corretas'})
+            return JsonResponse({'error': ''})
+        else:
+            return JsonResponse({'error': 'Tem de ser admin para criar um produto'})
 
-    product = Product(
-        name = "teste",
-        description = "dasdasdas",
-        price = 0,
-        # image = base64.urlsafe_b64decode(request.body),
-        product_type = ProductType.objects.get(name = "pulseiras"),
-        available_quantity = 0,
-    )
-    product.save()
-    # Save the temporary image to the model#
-    # This saves the model so be sure that is it valid
-    product.image.save("test.png", files.File(lf))
-    return HttpResponse(request.body)

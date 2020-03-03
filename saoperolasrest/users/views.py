@@ -8,8 +8,9 @@ from django.contrib.auth import authenticate
 import uuid
 from cart.models import Cart
 from cart.models import ShippingDetails
-
-
+from cart.views import get_user
+from products.models import Product
+from products.serializers import ProductSerializer
 
 # Helper methods
 
@@ -48,8 +49,6 @@ def signup_view(request):
     user.userprofile.save()
     return JsonResponse({})
 
-
-
 def login(request):
     if request.method == 'POST':
         body_unicode = request.body.decode('utf-8')
@@ -62,8 +61,34 @@ def login(request):
         authenticated = authenticate(username=user.username, password=password)
         if authenticated is not None:
             token = Token.objects.get_or_create(user=user)
-            return JsonResponse({"token":token[0].key,"username":user.first_name})
+            return JsonResponse({"token": token[0].key,"username": user.first_name})
         else:
             return JsonResponse({"error":"login failed"})
     else:
         return HttpResponse('POST ONLY')
+
+def add_to_favourites(request):
+    if request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        user = get_user(request)
+        if user == False:
+            return JsonResponse({'error': 'A sua conta não é reconhecida ou a sua sessão terminou, por favor faça login novamente'})
+        try:
+            user.userprofile.favourite_products.add(Product.objects.get(id=body['id']))
+        except:
+            return JsonResponse({'error': 'Problema ao encontrar o produto selecionado'})
+        return JsonResponse({'error': 'Problema ao adicionar o produto aos favoritos, por favor tente mais tarde'})
+
+
+def get_favourites(request):
+    user = get_user(request)
+    if user == False:
+        return JsonResponse({'error': 'A sua conta não é reconhecida ou a sua sessão terminou, por favor faça login novamente'})
+    queryset = None
+    try:
+        queryset = user.userprofile.favourite_products.all()
+    except:
+        return JsonResponse({'error': 'Erro ao procurar os seus produtos preferidos, por favor recarregue a página'})
+    serializer = ProductSerializer(queryset, many=True)
+    return JsonResponse(serializer.data, safe=False)
