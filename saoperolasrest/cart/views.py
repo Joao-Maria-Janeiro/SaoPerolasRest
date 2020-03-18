@@ -213,3 +213,4 @@ def complete_order(request):
             return JsonResponse({'error': ''})
         else:
             return JsonResponse({'error': 'Ocorreu um erro ao enviar o seu comprovativo por email, por favor envie um email para sao.perolas.pt@gmail.com para resolver a situação'})
+

@@ -92,3 +92,30 @@ def get_favourites(request):
         return JsonResponse({'error': 'Erro ao procurar os seus produtos preferidos, por favor recarregue a página'})
     serializer = ProductSerializer(queryset, many=True)
     return JsonResponse(serializer.data, safe=False)
+
+def update_user_info(request):
+    if request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        user = get_user(request)
+        if body['first_name']:
+            user.userprofile.name = body['first_name']
+        if body['last_name']:
+            user.userprofile.last_name = body['last_name']
+        if body['country']:
+            user.userprofile.country = body['country']
+        if body['address']:
+            user.userprofile.address = body['address']
+        if body['city']:
+            user.userprofile.city = body['city']
+        if body['zip_code']:
+            user.userprofile.zip_code = body['zip_code']
+        if body['localidade']:
+            user.userprofile.localidade = body['localidade']
+        if body['cell_number']:
+            user.userprofile.cell_number = body['cell_number']
+        if body['email']:
+            user.userprofile.email = body['email']
+        user.userprofile.save()
+        return JsonResponse({'error': ''})
+
