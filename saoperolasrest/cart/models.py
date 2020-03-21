@@ -24,7 +24,8 @@ def post_save_cart_create(sender, instance, created, *args, **kwargs):
 post_save.connect(post_save_cart_create, sender=settings.AUTH_USER_MODEL)
 
 class ShippingDetails(models.Model):
-    full_name = models.CharField(max_length = 300)
+    first_name = models.CharField(max_length = 300)
+    last_name = models.CharField(max_length = 300)
     adress = models.CharField(max_length = 300)
     city = models.CharField(max_length = 300)
     localidade = models.CharField(max_length = 300)

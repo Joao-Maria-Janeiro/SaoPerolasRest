@@ -11,6 +11,7 @@ from cart.models import ShippingDetails
 from cart.views import get_user
 from products.models import Product
 from products.serializers import ProductSerializer
+from .serializers import ShippingDetailsSerializer
 
 # Helper methods
 
@@ -35,7 +36,8 @@ def signup_view(request):
     user.last_name = body['last_name']
     user.email = body['email']
     saved_shipping = ShippingDetails(
-        full_name = body['first_name'] + " " + body['last_name'], 
+        first_name = body['first_name'],
+        last_name = body['last_name'], 
         adress = body['address'],
         city = body['city'],
         localidade = body['localidade'],
@@ -98,24 +100,37 @@ def update_user_info(request):
         body_unicode = request.body.decode('utf-8')
         body = json.loads(body_unicode)
         user = get_user(request)
-        if body['first_name']:
-            user.userprofile.name = body['first_name']
-        if body['last_name']:
-            user.userprofile.last_name = body['last_name']
-        if body['country']:
-            user.userprofile.country = body['country']
-        if body['address']:
-            user.userprofile.address = body['address']
-        if body['city']:
-            user.userprofile.city = body['city']
-        if body['zip_code']:
-            user.userprofile.zip_code = body['zip_code']
-        if body['localidade']:
-            user.userprofile.localidade = body['localidade']
-        if body['cell_number']:
-            user.userprofile.cell_number = body['cell_number']
-        if body['email']:
-            user.userprofile.email = body['email']
-        user.userprofile.save()
+        if user == False:
+            return JsonResponse({'error': 'A sua conta não é reconhecida ou a sua sessão terminou, por favor faça login novamente'})
+        if 'first_name' in body:
+            user.userprofile.saved_shipping.first_name = body['first_name']
+        if 'last_name' in body:
+            user.userprofile.saved_shipping.last_name = body['last_name']
+        if 'country' in body:
+            user.userprofile.saved_shipping.country = body['country']
+        if 'address' in body:
+            user.userprofile.saved_shipping.adress = body['address']
+        if 'city' in body:
+            user.userprofile.saved_shipping.city = body['city']
+        if 'zip_code' in body:
+            user.userprofile.saved_shipping.zip = body['zip_code']
+        if 'localidade' in body:
+            user.userprofile.saved_shipping.localidade = body['localidade']
+        if 'cell_number' in body:
+            user.userprofile.saved_shipping.phone_number = body['cell_number']
+        if 'email' in body:
+            user.userprofile.saved_shipping.email = body['email']
+        user.userprofile.saved_shipping.save()
         return JsonResponse({'error': ''})
 
+def get_user_details(request):
+    user = get_user(request)
+    if user == False:
+        return JsonResponse({'error': 'A sua conta não é reconhecida ou a sua sessão terminou, por favor faça login novamente'})
+    queryset = None
+    try:
+        queryset = user.userprofile.saved_shipping
+    except:
+        return JsonResponse({'error': 'Erro ao encontrar as suas informações, por favor recarregue a página'})
+    serializer = ShippingDetailsSerializer(queryset, many=False)
+    return JsonResponse(serializer.data, safe=False)

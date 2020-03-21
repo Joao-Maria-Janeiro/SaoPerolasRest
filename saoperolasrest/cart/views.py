@@ -154,7 +154,7 @@ def createIntent(request):
                 receipt_email=user.email,
                 metadata=products,
                 shipping = {
-                    "name": user.userprofile.saved_shipping.full_name,
+                    "name": user.userprofile.saved_shipping.first_name + " " + user.userprofile.saved_shipping.last_name,
                     "phone": user.userprofile.saved_shipping.phone_number,
                     "address": {
                         "city": user.userprofile.saved_shipping.city,
