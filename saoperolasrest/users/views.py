@@ -82,6 +82,19 @@ def add_to_favourites(request):
             return JsonResponse({'error': 'Problema ao encontrar o produto selecionado'})
         return JsonResponse({'error': 'Problema ao adicionar o produto aos favoritos, por favor tente mais tarde'})
 
+def remove_from_favourites(request):
+    if request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        user = get_user(request)
+        if user == False:
+            return JsonResponse({'error': 'A sua conta não é reconhecida ou a sua sessão terminou, por favor faça login novamente'})
+        try:
+            user.userprofile.favourite_products.remove(Product.objects.get(id=body['id']))
+        except:
+            return JsonResponse({'error': 'Problema ao encontrar o produto selecionado'})
+        return JsonResponse({'error': 'Problema ao adicionar o produto aos favoritos, por favor tente mais tarde'})
+
 
 def get_favourites(request):
     user = get_user(request)

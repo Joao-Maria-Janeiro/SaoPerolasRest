@@ -9,4 +9,5 @@ urlpatterns = [
     path('types/', csrf_exempt(views.get_types), name="types"),
     path('create/', csrf_exempt(views.create_product), name="create_product"),
     path('details/<int:id>/', csrf_exempt(views.get_product_from_id), name="get_product_from_id"),
+    path('is-favourite/<int:id>/', csrf_exempt(views.product_is_fav), name="product_is_fav"),
 ]

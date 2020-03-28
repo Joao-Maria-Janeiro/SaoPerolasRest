@@ -81,3 +81,11 @@ def create_product(request):
         else:
             return JsonResponse({'error': 'Tem de ser admin para criar um produto'})
 
+def product_is_fav(request, id):
+    user = get_user(request)
+    if user == False:
+        return JsonResponse({'error': 'A sua conta não é reconhecida ou a sua sessão terminou, por favor faça login novamente'})
+    for product in user.userprofile.favourite_products.all():
+        if(product.id == id):
+            return JsonResponse({'isFavourite': True})
+    return JsonResponse({'isFavourite': False})
