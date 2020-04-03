@@ -147,3 +147,18 @@ def get_user_details(request):
         return JsonResponse({'error': 'Erro ao encontrar as suas informações, por favor recarregue a página'})
     serializer = ShippingDetailsSerializer(queryset, many=False)
     return JsonResponse(serializer.data, safe=False)
+
+def remove_multiple_from_favourites(request):
+    if request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        user = get_user(request)
+        if user == False:
+            return JsonResponse({'error': 'A sua conta não é reconhecida ou a sua sessão terminou, por favor faça login novamente'})
+        for product in body:
+            try:
+                user.userprofile.favourite_products.remove(Product.objects.get(id=product['id']))
+            except:
+                return JsonResponse({'error': 'Problema ao encontrar o produto selecionado'})
+        return JsonResponse({'error': ''})
+
