@@ -131,9 +131,6 @@ def update_product_quantity_in_cart(request):
     else:
         return HttpResponse('POST ONLY')
 
-from Crypto.Cipher import AES
-import base64
-
 def createIntent(request):
     if request.method == 'POST':
         body_unicode = request.body.decode('utf-8')
@@ -209,6 +206,13 @@ def complete_order(request):
         order = Order.objects.get(payment_intent_client_secret=body['token'], secret_token=body['secret'])
         order.complete = True
         order.save()
+        if 'user_token' in body:
+            user = User.objects.get(auth_token=body['user_token'])
+            if user is False:
+                return JsonResponse({"error":"A sua sessão expirou, por favor faça login de novo"})
+            user.cart.products.clear()
+            user.cart.total_price = 0
+            user.cart.save()
         if send_mail(order, shipping_price):
             return JsonResponse({'error': ''})
         else:
