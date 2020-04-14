@@ -1,2 +1,3 @@
 keys.py
 aws_config.py
+db.sqlite3
