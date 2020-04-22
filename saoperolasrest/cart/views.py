@@ -218,3 +218,20 @@ def complete_order(request):
         else:
             return JsonResponse({'error': 'Ocorreu um erro ao enviar o seu comprovativo por email, por favor envie um email para sao.perolas.pt@gmail.com para resolver a situação'})
 
+
+def get_order_shipping(request):
+    if request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        intent = None
+        try:
+            order = Order.objects.get(payment_intent_client_secret=body['token'], secret_token=body['secret'])
+            intent = stripe.PaymentIntent.retrieve(order.payment_intent_id)
+        except:
+            return JsonResponse({'error': 'Não conseguimos aceder à sua encomenda'})
+        return JsonResponse({
+            "nome": intent.shipping["name"],
+            "morada_1": intent.shipping["address"]["line1"],
+            "morada_2": intent.shipping["address"]["state"] + ", " + intent.shipping["address"]["city"] + " "  + intent.shipping["address"]["postal_code"] + " " + intent.shipping["address"]["country"],
+        })
+

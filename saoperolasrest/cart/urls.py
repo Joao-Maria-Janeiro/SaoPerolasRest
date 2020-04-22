@@ -8,4 +8,5 @@ urlpatterns = [
     path('product/update/', csrf_exempt(views.update_product_quantity_in_cart), name="update_product_quantity_in_cart"),
     path('create-intent/', csrf_exempt(views.createIntent), name="createIntent"),
     path('complete-order/', csrf_exempt(views.complete_order), name="complete_order"),
+    path('order-shipping/', csrf_exempt(views.get_order_shipping), name="get_order_shipping"),
 ]
