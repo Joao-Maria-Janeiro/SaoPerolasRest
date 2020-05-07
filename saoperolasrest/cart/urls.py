@@ -9,4 +9,5 @@ urlpatterns = [
     path('create-intent/', csrf_exempt(views.createIntent), name="createIntent"),
     path('complete-order/', csrf_exempt(views.complete_order), name="complete_order"),
     path('order-shipping/', csrf_exempt(views.get_order_shipping), name="get_order_shipping"),
+    path('order-shipping-and-cart/', csrf_exempt(views.get_order_shipping_and_cart), name="get_order_shipping_and_cart"),
 ]

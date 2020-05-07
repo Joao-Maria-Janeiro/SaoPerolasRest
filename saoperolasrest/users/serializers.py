@@ -6,3 +6,4 @@ class ShippingDetailsSerializer(serializers.ModelSerializer):
         model = ShippingDetails
         fields = '__all__'
 
+

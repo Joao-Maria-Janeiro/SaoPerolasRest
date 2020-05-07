@@ -142,8 +142,12 @@ def createIntent(request):
                 return JsonResponse({'error': 'A sua sessão expirou ou credenciais erradas, por favor faça login outra vez'})
             try:
                 products = {}
+                num_of_prods = 0
                 for product in user.cart.products.all():
                     products[product.product.name] = product.quantity
+                    num_of_prods += 1
+                if(num_of_prods == 0):
+                    return JsonResponse({'error': 'O seu carrinho está vazio. Adicione pelo menos um produto antes de prosseguir'})
                 intent = stripe.PaymentIntent.create(
                     amount=user.cart.total_price * 100,
                     currency='eur',
@@ -171,8 +175,13 @@ def createIntent(request):
         else:
             try:
                 products = {}
+                num_of_prods = 0
                 for product in body['products']:
                     products[product['name']] = product['quantity']
+                    num_of_prods += 1
+                if(num_of_prods == 0):
+                    return JsonResponse({'error': 'O seu carrinho está vazio. Adicione pelo menos um produto antes de prosseguir'})
+                    
                 intent = stripe.PaymentIntent.create(
                     amount=int(body['total_price']) * 100,
                     currency='eur',
@@ -213,6 +222,8 @@ def complete_order(request):
             user.cart.products.clear()
             user.cart.total_price = 0
             user.cart.save()
+            user.userprofile.previous_orders.add(order)
+            user.userprofile.save()
         if send_mail(order, shipping_price):
             return JsonResponse({'error': ''})
         else:
@@ -234,4 +245,21 @@ def get_order_shipping(request):
             "morada_1": intent.shipping["address"]["line1"],
             "morada_2": intent.shipping["address"]["state"] + ", " + intent.shipping["address"]["city"] + " "  + intent.shipping["address"]["postal_code"] + " " + intent.shipping["address"]["country"],
         })
+
+def get_order_shipping_and_cart(request):
+    if request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        intent = None
+        try:
+            intent = stripe.PaymentIntent.retrieve(body['id'])
+        except:
+            return JsonResponse({'error': 'Não conseguimos aceder à sua encomenda'})
+        return JsonResponse({
+            "nome": intent.shipping["name"],
+            "morada_1": intent.shipping["address"]["line1"],
+            "morada_2": intent.shipping["address"]["state"] + ", " + intent.shipping["address"]["city"] + " "  + intent.shipping["address"]["postal_code"] + " " + intent.shipping["address"]["country"],
+            "products": intent.metadata
+        })
+
 

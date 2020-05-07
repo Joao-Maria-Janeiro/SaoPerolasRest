@@ -12,6 +12,7 @@ from cart.views import get_user
 from products.models import Product
 from products.serializers import ProductSerializer
 from .serializers import ShippingDetailsSerializer
+from cart.serializers import OderSerializer
 
 # Helper methods
 
@@ -162,3 +163,11 @@ def remove_multiple_from_favourites(request):
                 return JsonResponse({'error': 'Problema ao encontrar o produto selecionado'})
         return JsonResponse({'error': ''})
 
+def get_previous_orders(request):
+    if request.method == 'GET':
+        user = get_user(request)
+        if user == False:
+            return JsonResponse({'error': 'A sua conta não é reconhecida ou a sua sessão terminou, por favor faça login novamente'})
+        orders = user.userprofile.previous_orders.order_by('-date_ordered')
+        serializer = OderSerializer(orders, many=True)
+        return JsonResponse(serializer.data, safe=False)
