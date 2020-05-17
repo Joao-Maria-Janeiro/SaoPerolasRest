@@ -86,7 +86,7 @@ def update_product_quantity_in_cart(request):
         if user is not False:
             cart = user.cart 
         else:
-            return JsonResponse({"error":"A sua sessão expirou, por favor fa;a login de novo"})
+            return JsonResponse({"error":"A sua sessão expirou, por favor faça login de novo"})
         if body['operation'] == 'increase':
             if product.product.available_quantity >= product.quantity + body['quantity']:
                 product.quantity += body['quantity']
@@ -148,24 +148,44 @@ def createIntent(request):
                     num_of_prods += 1
                 if(num_of_prods == 0):
                     return JsonResponse({'error': 'O seu carrinho está vazio. Adicione pelo menos um produto antes de prosseguir'})
-                intent = stripe.PaymentIntent.create(
-                    amount=user.cart.total_price * 100,
-                    currency='eur',
-                    description='produtos',
-                    receipt_email=user.email,
-                    metadata=products,
-                    shipping = {
-                        "name": user.userprofile.saved_shipping.first_name + " " + user.userprofile.saved_shipping.last_name,
-                        "phone": user.userprofile.saved_shipping.phone_number,
-                        "address": {
-                            "city": user.userprofile.saved_shipping.city,
-                            "country": user.userprofile.saved_shipping.country,
-                            "line1": user.userprofile.saved_shipping.adress,
-                            "postal_code": user.userprofile.saved_shipping.zip,
-                            "state": user.userprofile.saved_shipping.localidade
+                if(body['use_saved_details']):
+                    intent = stripe.PaymentIntent.create(
+                        amount=user.cart.total_price * 100,
+                        currency='eur',
+                        description='produtos',
+                        receipt_email=user.email,
+                        metadata=products,
+                        shipping = {
+                            "name": user.userprofile.saved_shipping.first_name + " " + user.userprofile.saved_shipping.last_name,
+                            "phone": user.userprofile.saved_shipping.phone_number,
+                            "address": {
+                                "city": user.userprofile.saved_shipping.city,
+                                "country": user.userprofile.saved_shipping.country,
+                                "line1": user.userprofile.saved_shipping.adress,
+                                "postal_code": user.userprofile.saved_shipping.zip,
+                                "state": user.userprofile.saved_shipping.localidade
+                            }
                         }
-                    }
-                )
+                    )
+                else:
+                    intent = stripe.PaymentIntent.create(
+                        amount=user.cart.total_price * 100,
+                        currency='eur',
+                        description='produtos',
+                        receipt_email=body['email'],
+                        metadata=products,
+                        shipping = {
+                            "name": body['full_name'],
+                            "phone": body['cell'],
+                            "address": {
+                                "city": body['city'],
+                                "country": body['country'],
+                                "line1": body['address'],
+                                "postal_code": body['zip'],
+                                "state": body['localidade']
+                            }
+                        }
+                    )
             except:
                 return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos. Se o erro persistir recarregue a página'})
             secret = str(uuid.uuid4())
@@ -219,12 +239,20 @@ def complete_order(request):
             user = User.objects.get(auth_token=body['user_token'])
             if user is False:
                 return JsonResponse({"error":"A sua sessão expirou, por favor faça login de novo"})
+            for product in user.cart.products.all():
+                product.delete()
             user.cart.products.clear()
             user.cart.total_price = 0
             user.cart.save()
             user.userprofile.previous_orders.add(order)
             user.userprofile.save()
-        if send_mail(order, shipping_price):
+        
+        intent = stripe.PaymentIntent.retrieve(order.payment_intent_id)
+        products = Product.objects.filter(name__in=intent.metadata.keys())
+        for product in products:
+            product.available_quantity -= int(intent.metadata.get(product.name))
+            product.save()
+        if send_mail(order, shipping_price, products):
             return JsonResponse({'error': ''})
         else:
             return JsonResponse({'error': 'Ocorreu um erro ao enviar o seu comprovativo por email, por favor envie um email para sao.perolas.pt@gmail.com para resolver a situação'})
