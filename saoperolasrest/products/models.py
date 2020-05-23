@@ -8,7 +8,7 @@ class ProductType(models.Model):
         return self.name
 
 class Product(models.Model):
-    name = models.CharField(max_length=400)
+    name = models.CharField(max_length=400, unique=True)
     description = models.TextField()
     price = models.FloatField(max_length=5)
     image = models.ImageField(upload_to='page_image', blank=True)
