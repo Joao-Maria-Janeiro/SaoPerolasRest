@@ -9,7 +9,7 @@ from django.core import files
 import tempfile
 from django.core.files.base import ContentFile
 from cart.views import get_user
-
+from .forms import ProductForm
 
 def get_cover_photos(request):
     queryset = CoverPhoto.objects.order_by('id')
@@ -80,6 +80,19 @@ def create_product(request):
             return JsonResponse({'error': ''})
         else:
             return JsonResponse({'error': 'Tem de ser admin para criar um produto'})
+
+def create_product_backend(request):
+    if request.user.is_superuser:
+        if request.method == 'POST':
+            form = ProductForm(request.POST, request.FILES)
+            if form.is_valid():
+                form.save()
+                return HttpResponse('Produto criado com sucesso')
+        else:
+            form = ProductForm()
+        return render(request, 'products/create_product.html', {'form': form})
+    else:
+        return HttpResponse('Tem de ser admin para criar um produto')
 
 def product_is_fav(request, id):
     user = get_user(request)

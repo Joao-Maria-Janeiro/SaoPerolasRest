@@ -10,4 +10,5 @@ urlpatterns = [
     path('create/', csrf_exempt(views.create_product), name="create_product"),
     path('details/<int:id>/', csrf_exempt(views.get_product_from_id), name="get_product_from_id"),
     path('is-favourite/<int:id>/', csrf_exempt(views.product_is_fav), name="product_is_fav"),
+    path('create-product-backend', views.create_product_backend, name="create_product_backend"),
 ]
