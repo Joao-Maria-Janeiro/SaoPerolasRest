@@ -1,3 +1,5 @@
 keys.py
 aws_config.py
 db.sqlite3
+static
+staticfiles

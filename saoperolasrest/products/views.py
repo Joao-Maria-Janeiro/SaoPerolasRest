@@ -25,7 +25,7 @@ def get_background_photo(request):
     
 def get_products(request, p_type):
     try:
-        queryset = Product.objects.filter(product_type = ProductType.objects.get(name=p_type))
+        queryset = Product.objects.filter(product_type = ProductType.objects.get(name=p_type)).order_by('-id')
     except:
         return HttpResponse("There are no products of that type")
     serializer = ProductSerializer(queryset, many=True)
