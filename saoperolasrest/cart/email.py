@@ -31,6 +31,10 @@ def send_mail(order, shipping_price, products):
                         {
                             "Email": intent.receipt_email,
                             "Name": intent.shipping["name"]
+                        },
+                        {
+                            "Email": "sao.perolas.pt@gmail.com",
+                            "Name": "São Pérolas"
                         }
                     ],
                     "TemplateID": 1238228,
