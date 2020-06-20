@@ -43,3 +43,7 @@ class Order(models.Model):
     shipping_details = models.ForeignKey(ShippingDetails, on_delete=models.CASCADE, null=True)
     secret_token = models.CharField(max_length=300)
     complete = models.BooleanField(default=False)
+
+class ShippingPrice(models.Model):
+    price = models.IntegerField(def
+

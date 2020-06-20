@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Cart, CartProduct, ShippingDetails, Order
+from .models import Cart, CartProduct, ShippingDetails, Order, ShippingPrice
 from products.models import Product
 from django.http import JsonResponse, HttpResponse
 import uuid
@@ -11,7 +11,7 @@ from .email import send_mail
 from .keys import STRIPE_KEY
 
 stripe.api_key = STRIPE_KEY
-shipping_price = 3
+shipping_price = (ShippingPrice.objects.all())[0].price
 
 def get_user(request):
     try:
@@ -72,6 +72,13 @@ def get_user_cart(request):
     user = get_user(request)
     if user is not False:
         cart = user.cart
+        for product in cart.products.all():
+            if product.product.available_quantity <= 0:
+                cart.products.remove(product)
+                product.delete()
+        cart.total_price = 0   
+        calc_price_and_update(cart)
+        cart.save()
         serializer = CartSerializer(cart, many=False)
         return JsonResponse(serializer.data, safe=False)
     else:
@@ -290,4 +297,6 @@ def get_order_shipping_and_cart(request):
             "products": intent.metadata
         })
 
+def get_shipping_price(request):
+    return JsonResponse({'price': shipping_price})
 
