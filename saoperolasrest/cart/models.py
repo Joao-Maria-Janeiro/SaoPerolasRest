@@ -45,5 +45,5 @@ class Order(models.Model):
     complete = models.BooleanField(default=False)
 
 class ShippingPrice(models.Model):
-    price = models.IntegerField(def
+    price = models.IntegerField(default=3)
 
