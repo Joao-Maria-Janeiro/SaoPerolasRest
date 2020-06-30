@@ -11,6 +11,8 @@ from django.core.files.base import ContentFile
 from cart.views import get_user
 from .forms import ProductForm
 
+rectangular_image_product_type = "Colares Compridos"
+
 def get_cover_photos(request):
     queryset = CoverPhoto.objects.order_by('id')
     serializer = CoverPhotoSerializer(queryset, many=True)
@@ -31,8 +33,25 @@ def get_products(request, p_type):
     serializer = ProductSerializer(queryset, many=True)
     return JsonResponse(serializer.data, safe=False)
 
+def get_all_products(request):
+    try:
+        queryset = Product.objects.filter(product_type__name = rectangular_image_product_type).order_by('-id')
+    except:
+        return HttpResponse("There are no products of that type")
+    serializer = ProductSerializer(queryset, many=True)
+    return JsonResponse(serializer.data, safe=False)
+
+def get_all_besides_rectangular_images(request):
+    try:
+        queryset = Product.objects.exclude(product_type__name = rectangular_image_product_type).order_by('-id')
+    except:
+        return HttpResponse("There are no products of that type")
+    serializer = ProductSerializer(queryset, many=True)
+    return JsonResponse(serializer.data, safe=False)
+
+
 def get_types(request):
-    queryset = ProductType.objects.order_by('id')
+    queryset = ProductType.objects.order_by('name')
     serializer = ProductTypeSerializer(queryset, many=True)
     return JsonResponse(serializer.data, safe=False)
 
@@ -43,8 +62,6 @@ def get_product_from_id(request, id):
         return HttpResponse("No matching product")
     serializer = ProductSerializer(queryset, many=False)
     return JsonResponse(serializer.data, safe=False)
-
-## Still under development under here
 
 def create_product(request):
     if request.method == 'POST':
@@ -102,3 +119,4 @@ def product_is_fav(request, id):
         if(product.id == id):
             return JsonResponse({'isFavourite': True})
     return JsonResponse({'isFavourite': False})
+
