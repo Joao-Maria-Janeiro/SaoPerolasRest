@@ -10,6 +10,10 @@ import tempfile
 from django.core.files.base import ContentFile
 from cart.views import get_user
 from .forms import ProductForm
+from PIL import Image
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.files.base import ContentFile
 
 rectangular_image_product_type = "Colares Compridos"
 
@@ -119,4 +123,29 @@ def product_is_fav(request, id):
         if(product.id == id):
             return JsonResponse({'isFavourite': True})
     return JsonResponse({'isFavourite': False})
+
+def reduce_image_size(request):
+    for product in Product.objects.all():
+        image = Image.open(product.image)
+        if(len(image.fp.read()) > 500000):
+            buffer = BytesIO()
+            image.save(fp=buffer, format='JPEG', quality=20, optimize=True)
+            pill_image = ContentFile(buffer.getvalue())
+            image_name = product.image.name
+            product.image.delete()
+            temp_image = InMemoryUploadedFile(
+                pill_image,       
+                None,               
+                image_name,           
+                'image/jpeg',       
+                pill_image.tell,  
+                None)
+            product.image.save(image_name, temp_image)
+            product.save()
+            temp_image.close()
+    return HttpResponse('Success')
+
+
+
+
 
