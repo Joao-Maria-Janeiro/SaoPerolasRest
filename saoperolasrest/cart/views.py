@@ -219,7 +219,7 @@ def createIntent(request):
                     return JsonResponse({'error': 'Um dos produtos que escolheu não existe. Por favor tente novamente'})
                     
                 intent = stripe.PaymentIntent.create(
-                    amount=total_price * 100,
+                    amount= int(total_price * 100),
                     currency='eur',
                     description='produtos',
                     receipt_email=body['email'],
