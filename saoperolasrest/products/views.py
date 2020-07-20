@@ -24,7 +24,7 @@ def get_cover_photos(request):
 
 def get_background_photo(request):
     try:
-        serialzer = BackGroundImageSerializer(BackGroundImage.objects.all(), many=True)
+        serialzer = BackGroundImageSerializer(BackGroundImage.objects.order_by('product_type__name'), many=True)
         return JsonResponse(serialzer.data, safe=False)
     except:
         return HttpResponse("No Background")
