@@ -208,9 +208,18 @@ def createIntent(request):
                     num_of_prods += 1
                 if(num_of_prods == 0):
                     return JsonResponse({'error': 'O seu carrinho está vazio. Adicione pelo menos um produto antes de prosseguir'})
+                
+                total_price = 0
+                try:
+                    database_products = Product.objects.filter(name__in=intent.metadata.keys())
+                    for product in database_products:
+                        total_price += (product.price * products[product.name])
+                    total_price += shipping_price
+                except:
+                    return JsonResponse({'error': 'Um dos produtos que escolheu não existe. Por favor tente novamente'})
                     
                 intent = stripe.PaymentIntent.create(
-                    amount=int(body['total_price']) * 100,
+                    amount=total_price * 100,
                     currency='eur',
                     description='produtos',
                     receipt_email=body['email'],
@@ -298,5 +307,6 @@ def get_order_shipping_and_cart(request):
         })
 
 def get_shipping_price(request):
+    shipping_price = (ShippingPrice.objects.all())[0].price
     return JsonResponse({'price': shipping_price})
 
