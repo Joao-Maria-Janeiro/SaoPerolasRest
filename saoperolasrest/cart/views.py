@@ -211,7 +211,7 @@ def createIntent(request):
                 
                 total_price = 0
                 try:
-                    database_products = Product.objects.filter(name__in=intent.metadata.keys())
+                    database_products = Product.objects.filter(name__in=products.keys())
                     for product in database_products:
                         total_price += (product.price * products[product.name])
                     total_price += shipping_price
