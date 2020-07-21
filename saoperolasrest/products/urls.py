@@ -14,4 +14,5 @@ urlpatterns = [
     path('is-favourite/<int:id>/', csrf_exempt(views.product_is_fav), name="product_is_fav"),
     path('create-product-backend', views.create_product_backend, name="create_product_backend"),
     path('reduce-image-size', views.reduce_image_size, name="reduce_image_size"),
+    path('get-all-csv', views.get_all_products_csv, name="get_all_products_csv")
 ]

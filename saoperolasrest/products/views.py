@@ -146,6 +146,23 @@ def reduce_image_size(request):
     return HttpResponse('Success')
 
 
+def get_all_products_csv(request):
+    if request.user.is_superuser:
+        if request.method == 'GET':
+            output_csv = 'id,title,description,availability,condition,price,link,image_link,brand,inventory,product_type<br>'
+            products = Product.objects.all()
+            for product in products:
+                output_csv += (str(product.id) + ',' + product.name + ',' + product.description + ',' 
+                + 'in stock' + ',' + 'new' + ',' + str(product.price) + ' EUR,' 
+                + 'https://saoperolas.pt/#/products/details/' + str(product.id) + ',' + product.image.url + ',' + 'São Pérolas'  + ',' 
+                + str(product.available_quantity) + ',' + product.product_type.name + '<br>')
+            
+            return HttpResponse(output_csv)
+
+        else:
+            return HttpResponse('Tem de ser um GET request')
+    else:
+        return HttpResponse('Tem de ser admin para ver todos os produtos')
 
 
 
