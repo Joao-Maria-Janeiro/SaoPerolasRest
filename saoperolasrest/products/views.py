@@ -152,7 +152,7 @@ def get_all_products_csv(request):
             output_csv = 'id,title,description,availability,condition,price,link,image_link,brand,inventory,product_type<br>'
             products = Product.objects.all()
             for product in products:
-                output_csv += (str(product.id) + ',' + product.name + ',' + product.description + ',' 
+                output_csv += (str(product.id) + ',' + product.name + ',' + product.description.replace(',', ' ') + ',' 
                 + 'in stock' + ',' + 'new' + ',' + str(product.price) + ' EUR,' 
                 + 'https://saoperolas.pt/#/products/details/' + str(product.id) + ',' + product.image.url + ',' + 'São Pérolas'  + ',' 
                 + str(product.available_quantity) + ',' + product.product_type.name + '<br>')

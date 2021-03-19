@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Cart, CartProduct, ShippingDetails, Order, ShippingPrice
+from .models import Cart, CartProduct, ShippingDetails, Order, ShippingPrice, Coupons
 from products.models import Product
 from django.http import JsonResponse, HttpResponse
 import uuid
@@ -9,6 +9,9 @@ from .serializers import CartSerializer
 import stripe
 from .email import send_mail
 from .keys import STRIPE_KEY
+from django.utils import timezone
+from decimal import Decimal
+
 
 stripe.api_key = STRIPE_KEY
 shipping_price = (ShippingPrice.objects.all())[0].price
@@ -32,9 +35,20 @@ def calc_price_and_update(cart):
         cart.total_price = 0
         return
     for product in cart.products.all():
-        price = int(product.product.price) * (product.quantity)
+        price = product.product.price * (product.quantity)
         cart.total_price += price
     cart.total_price +=  shipping_price
+
+def check_coupon_and_return_coupon_or_error(coupon_code):
+    try:
+        coupon = Coupons.objects.get(code = coupon_code)
+        if timezone.now() > coupon.expiration_date:
+            return ("O cupão introduzido expirou", None)
+        else:
+            return("", coupon)
+    except:
+        return ("O cupão introduzido não é válido", None)
+
 
 # Create your views here.
 def add_to_cart(request):
@@ -142,26 +156,40 @@ def createIntent(request):
     if request.method == 'POST':
         body_unicode = request.body.decode('utf-8')
         body = json.loads(body_unicode)
+        coupon = None
+        if 'coupon' in body:
+            coupon_error, coupon = check_coupon_and_return_coupon_or_error(body['coupon'])
+            if coupon == None:
+                return JsonResponse({'error': coupon_error})
         if ('token' in body):
             try:
                 user = User.objects.get(auth_token=body['token'])
             except:
                 return JsonResponse({'error': 'A sua sessão expirou ou credenciais erradas, por favor faça login outra vez'})
             try:
-                products = {}
+                # Create dictionary with product_name -> quantity for stripe metadata
+                metadata = {}
                 num_of_prods = 0
                 for product in user.cart.products.all():
-                    products[product.product.name] = product.quantity
+                    metadata[product.product.name] = product.quantity
                     num_of_prods += 1
                 if(num_of_prods == 0):
                     return JsonResponse({'error': 'O seu carrinho está vazio. Adicione pelo menos um produto antes de prosseguir'})
+                # Coupon handling
+                if coupon != None:
+                    if coupon.minimum_value > user.cart.total_price:
+                        return JsonResponse({'error': 'O valor do carrinho tem de ser superior a ' + str(coupon.minimum_value) + "€"}) 
+                    # user.cart.coupons.add(coupon)
+                    user.cart.total_price = user.cart.total_price * (1-coupon.percentage)
+                    user.cart.save()
+                    metadata['coupon_code'] = coupon.code
                 if(body['use_saved_details']):
                     intent = stripe.PaymentIntent.create(
-                        amount=user.cart.total_price * 100,
+                        amount=int(user.cart.total_price * 100),
                         currency='eur',
                         description='produtos',
                         receipt_email=user.email,
-                        metadata=products,
+                        metadata=metadata,
                         shipping = {
                             "name": user.userprofile.saved_shipping.first_name + " " + user.userprofile.saved_shipping.last_name,
                             "phone": user.userprofile.saved_shipping.phone_number,
@@ -176,11 +204,11 @@ def createIntent(request):
                     )
                 else:
                     intent = stripe.PaymentIntent.create(
-                        amount=user.cart.total_price * 100,
+                        amount=int(user.cart.total_price * 100),
                         currency='eur',
                         description='produtos',
                         receipt_email=body['email'],
-                        metadata=products,
+                        metadata=metadata,
                         shipping = {
                             "name": body['full_name'],
                             "phone": body['cell'],
@@ -201,29 +229,37 @@ def createIntent(request):
             return JsonResponse({'token': intent.client_secret, 'secret': secret})
         else:
             try:
-                products = {}
+                # Create dictionary with product_name -> quantity for stripe metadata
+                metadata = {}
                 num_of_prods = 0
                 for product in body['products']:
-                    products[product['name']] = product['quantity']
+                    metadata[product['name']] = product['quantity']
                     num_of_prods += 1
                 if(num_of_prods == 0):
                     return JsonResponse({'error': 'O seu carrinho está vazio. Adicione pelo menos um produto antes de prosseguir'})
                 
                 total_price = 0
                 try:
-                    database_products = Product.objects.filter(name__in=products.keys())
+                    database_products = Product.objects.filter(name__in=metadata.keys())
                     for product in database_products:
-                        total_price += (product.price * products[product.name])
+                        total_price += (product.price * metadata[product.name])
                     total_price += shipping_price
                 except:
                     return JsonResponse({'error': 'Um dos produtos que escolheu não existe. Por favor tente novamente'})
-                    
+                
+                # Coupon handling
+                if coupon != None:
+                    metadata['coupon_code'] = coupon.code
+                    if coupon.minimum_value > total_price:
+                        return JsonResponse({'error': 'O valor do carrinho tem de ser superior a ' + str(coupon.minimum_value) + "€"}) 
+                
+                total_price = int(total_price * 100)  if coupon == None else int(Decimal(total_price * 100) * (1-coupon.percentage))
                 intent = stripe.PaymentIntent.create(
-                    amount= int(total_price * 100),
+                    amount= total_price,
                     currency='eur',
                     description='produtos',
                     receipt_email=body['email'],
-                    metadata=products,
+                    metadata=metadata,
                     shipping = {
                         "name": body['full_name'],
                         "phone": body['cell'],
@@ -239,7 +275,7 @@ def createIntent(request):
             except:
                 return JsonResponse({'error': 'Ocorreu um erro ao criar a sua encomenda, por favor verifique que todos os detalhes de envio estão corretos. Se o erro persistir recarregue a página'})
             secret = str(uuid.uuid4())
-            order = Order(cart=None, total_price=float(body['total_price']) * 100, 
+            order = Order(cart=None, total_price=total_price, 
                 payment_intent_client_secret=intent.client_secret, payment_intent_id=intent.id, shipping_details=None, secret_token=secret)
             order.save()
             return JsonResponse({'token': intent.client_secret, 'secret': secret})
@@ -309,4 +345,11 @@ def get_order_shipping_and_cart(request):
 def get_shipping_price(request):
     shipping_price = (ShippingPrice.objects.all())[0].price
     return JsonResponse({'price': shipping_price})
+
+def verify_coupon(request):
+    if request.method == 'POST':
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        coupon_error, coupon = check_coupon_and_return_coupon_or_error(body['coupon'])
+        return JsonResponse({'error': coupon_error, "minimum_value": coupon.minimum_value if len(coupon_error) == 0 else 0, "percentage": coupon.percentage if len(coupon_error) == 0 else 0})
 

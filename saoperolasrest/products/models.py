@@ -15,7 +15,7 @@ class ProductType(models.Model):
 class Product(models.Model):
     name = models.CharField(max_length=400, unique=True)
     description = models.TextField()
-    price = models.FloatField(max_length=5)
+    price = models.DecimalField(max_digits=8, decimal_places=3, default=0)
     image = models.ImageField(upload_to='page_image', blank=True)
     product_type = models.ForeignKey(ProductType, on_delete=models.CASCADE)
     available_quantity = models.IntegerField(default=0)
