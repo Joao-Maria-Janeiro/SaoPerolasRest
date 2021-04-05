@@ -18,7 +18,8 @@ api_secret = MAIL_API_SECRET
 def send_mail(order, shipping_price, products):
     try:
         intent = stripe.PaymentIntent.retrieve(order.payment_intent_id)
-        del intent.metadata['coupon_code']
+        if 'coupon_code' in intent.metadata:
+            del intent.metadata['coupon_code']
         number_of_keys = len(intent.metadata.keys())
         
         mailjet = Client(auth=(api_key, api_secret), version='v3.1')
